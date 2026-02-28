@@ -46,6 +46,11 @@ def startup():
         print("Start the server after exporting models from the notebook.")
 
 
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "models_loaded": model_early is not None}
+
+
 # Defaults for missing features (0 or neutral)
 DEFAULTS_EARLY = {
     "clicks_wk1_4": 0,
