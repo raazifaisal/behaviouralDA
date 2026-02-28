@@ -30,5 +30,6 @@ ui/out/
 *.swp
 *.swo
 
-# OULAD dataset (too large for GitHub; download from UCI)
+# OULAD dataset — raw CSVs too large for GitHub; use the .zip in repo root
 open+university+learning+analytics+dataset/*.csv
+open+university+learning+analytics+dataset/OULAD.names
