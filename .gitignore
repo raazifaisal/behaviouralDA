@@ -29,3 +29,6 @@ ui/out/
 .vscode/
 *.swp
 *.swo
+
+# OULAD dataset (too large for GitHub; download from UCI)
+open+university+learning+analytics+dataset/*.csv

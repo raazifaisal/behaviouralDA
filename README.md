@@ -22,6 +22,8 @@ The dataset contains de-identified data about courses, students, and their inter
 | `studentRegistration.csv` | Registration and unregistration dates |
 | `vle.csv` | Activity types (e.g. forum, resource) per site |
 
+**Getting the data:** A compressed copy is in the repo: **`open+university+learning+analytics+dataset.zip`** (project root). Extract it so the CSV files end up in `open+university+learning+analytics+dataset/`, then run the notebook. Alternatively, download from the [UCI link](https://archive.ics.uci.edu/dataset/349/open+university+learning+analytics+dataset) above.
+
 ---
 
 ## Why OULAD fits behavioural analytics
