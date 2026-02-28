@@ -1,0 +1,28 @@
+{
+  "early_dropout": {
+    "accuracy": 0.7947,
+    "precision": 0.7697,
+    "recall": 0.487,
+    "f1": 0.5966,
+    "roc_auc": 0.8124,
+    "cv_accuracy": "75.3% (\u00b116.2%)"
+  },
+  "full_at_risk_rf": {
+    "accuracy": 0.867,
+    "precision": 0.8606,
+    "recall": 0.8007,
+    "f1": 0.8296
+  },
+  "full_at_risk_dt": {
+    "accuracy": 0.836,
+    "precision": 0.7985,
+    "recall": 0.795,
+    "f1": 0.7967
+  },
+  "full_at_risk_nb": {
+    "accuracy": 0.7298,
+    "precision": 0.9369,
+    "recall": 0.3555,
+    "f1": 0.5154
+  }
+}

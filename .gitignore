@@ -30,6 +30,10 @@ ui/out/
 *.swp
 *.swo
 
+# Internal / prompts (do not ship)
+PROMPT_STORY_FRONTEND.md
+docs/Presentation_Outline.md
+
 # OULAD dataset — raw CSVs too large for GitHub; use the .zip in repo root
 open+university+learning+analytics+dataset/*.csv
 open+university+learning+analytics+dataset/OULAD.names

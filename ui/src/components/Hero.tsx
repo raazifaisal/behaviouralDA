@@ -96,7 +96,7 @@ export default function Hero() {
       
       <div className="z-10 text-center max-w-4xl mt-32">
         <h1 ref={headline} className="font-serif text-5xl md:text-7xl lg:text-8xl leading-tight text-bone">
-          They don't drop out overnight. They slip away in silence.
+          Students don't drop out overnight. They slip away in silence.
         </h1>
       </div>
 

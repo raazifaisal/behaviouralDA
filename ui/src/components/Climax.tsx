@@ -93,8 +93,17 @@ export default function Climax({ digitalFootprint, deadlineState, echoState, mom
     }
   };
 
-    const isRisk = result?.predicted_at_risk || result?.predicted_dropout || (result?.risk_score >= 66);
-    const isBorderline = !isRisk && (result?.risk_score >= 33 || result?.burnout_risk_level === 'Medium');
+    // High Risk: model is genuinely confident (≥70% at-risk OR ≥55% dropout) OR risk score clearly high
+    const isRisk = (result?.at_risk_probability >= 0.70) ||
+                   (result?.dropout_probability >= 0.55) ||
+                   (result?.risk_score >= 68);
+    // Borderline: model flags at-risk but with moderate confidence, or risk score in the middle band
+    const isBorderline = !isRisk && (
+      result?.predicted_at_risk ||
+      result?.predicted_dropout ||
+      result?.risk_score >= 35 ||
+      result?.burnout_risk_level === 'Medium'
+    );
 
   return (
     <section className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 overflow-hidden transition-colors duration-1000"

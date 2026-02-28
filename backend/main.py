@@ -255,6 +255,10 @@ def predict_all(req: PredictFullRequest):
     return out
 
 
+# Serve webapp artifacts (viz, metrics) for "See detailed results" modal
+if ARTIFACTS.exists():
+    app.mount("/artifacts", StaticFiles(directory=str(ARTIFACTS)), name="artifacts")
+
 # Serve frontend
 if FRONTEND.exists():
     if (FRONTEND / "_next").exists():
