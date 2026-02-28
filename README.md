@@ -2,6 +2,8 @@
 
 Behavioural analytics system for early detection of student burnout and dropout risk using the Open University Learning Analytics Dataset (OULAD). Includes a dual-layer Random Forest pipeline (4-week early warning + full-term at-risk), risk scoring, and an interactive web app.
 
+**Live deployment:** [behaviouralda.onrender.com](https://behaviouralda.onrender.com)
+
 ---
 
 ## Dataset source and link
