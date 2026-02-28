@@ -1,0 +1,161 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{enumitem}
+
+\geometry{margin=2.5cm}
+\setlength{\parskip}{0.5em}
+
+\title{\textbf{Model Explanation Document}\\Burnout \& Dropout Analytics}
+\author{Raazi Faisal Mohiddin (ID: 22MIA1103)}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-1em}
+\hrule
+\vspace{0.5em}
+
+%==============================================================================
+\section{Problem Understanding}
+%==============================================================================
+
+Student dropout in higher education is not an instantaneous event but a gradual process. Before a student formally withdraws, behavioural signals---reduced engagement, late submissions, and disengagement from learning materials---often appear weeks in advance. The goal of this project is to predict both \textbf{early dropout} (withdrawal within the first 30 days) and \textbf{at-risk} status (Withdrawn or Fail at end of course) using only observable digital behaviour and assessment patterns from the Open University Learning Analytics Dataset (OULAD).
+
+The problem is framed as:
+\begin{itemize}[noitemsep]
+  \item \textbf{Early warning:} Identify students likely to drop out using only the first 4 weeks of activity, enabling timely intervention.
+  \item \textbf{Full-term risk:} Classify students as at-risk (Withdrawn/Fail) vs.\ not at-risk (Pass/Distinction) using behavioural and assessment features over the full course.
+  \item \textbf{Burnout risk scoring:} Produce a composite risk score (0--100) and burnout level (Low/Medium/High) to prioritise support and trigger targeted interventions.
+\end{itemize}
+
+Success is measured by prediction accuracy, F1 (given class imbalance), and ROC-AUC, while ensuring that the derived features and risk logic are interpretable and actionable for advisors.
+
+%==============================================================================
+\section{Data Assumptions and Dataset Description}
+%==============================================================================
+
+\subsection{Data Source}
+The \textbf{Open University Learning Analytics Dataset (OULAD)} contains de-identified data from courses presented between 2013 and 2014. Key tables used:
+\begin{itemize}[noitemsep]
+  \item \textbf{studentInfo} ($\sim$32,593 rows): Demographics, \texttt{final\_result} (Pass, Fail, Withdrawn, Distinction), \texttt{imd\_band}, \texttt{num\_of\_prev\_attempts}, \texttt{studied\_credits}.
+  \item \textbf{studentVle} ($\sim$10.6M rows): Date-level clicks per student per VLE site (code\_module, code\_presentation, id\_student, date, sum\_click).
+  \item \textbf{studentAssessment} \& \textbf{assessments}: Submission dates and scores; used to compute late submission rates and score trends.
+  \item \textbf{studentRegistration}: Registration and unregistration dates; used to define early dropout (unregistration within 30 days).
+  \item \textbf{vle}: Activity types (e.g.\ \texttt{forumng}) for deriving forum-specific click counts.
+\end{itemize}
+
+\subsection{Assumptions}
+\begin{enumerate}[noitemsep]
+  \item \texttt{final\_result} is the ground truth for dropout (Withdrawn = 1) and at-risk (Withdrawn or Fail = 1).
+  \item Clicks and submission behaviour are representative of engagement; missing VLE data are filled with zeros after aggregation.
+  \item Early dropout (unregistration $\leq$ 30 days) is a valid proxy for ``early exit'' and is used as both a feature and a trigger in the full model.
+  \item IMD band (index of multiple deprivation) is mapped to a numeric scale (e.g.\ 1--10) and used as a socioeconomic proxy; missing or unknown bands are handled in preprocessing.
+\end{enumerate}
+
+%==============================================================================
+\section{Feature Engineering Logic}
+%==============================================================================
+
+Features are grouped into three behavioural themes plus demographics.
+
+\subsection{Digital footprint (VLE)}
+From \textbf{studentVle} and \textbf{vle}:
+\begin{itemize}[noitemsep]
+  \item \textbf{total\_clicks}, \textbf{active\_days}: Sum and count of distinct dates per (module, presentation, student).
+  \item \textbf{login\_freq\_per\_week}, \textbf{avg\_session\_intensity}: Derived from weekly activity.
+  \item \textbf{forum\_clicks}: Clicks on \texttt{activity\_type == ``forumng''} only.
+\end{itemize}
+For the \textbf{early model} (first 4 weeks only): \textbf{clicks\_wk1\_4}, \textbf{active\_days\_wk1\_4}, \textbf{submissions\_wk1\_4}, \textbf{early\_scores\_avg}.
+
+\subsection{Midnight oil (assessments)}
+From \textbf{studentAssessment} and \textbf{assessments}:
+\begin{itemize}[noitemsep]
+  \item \textbf{late\_sub\_rate}: Proportion of submissions after deadline; \textbf{avg\_days\_late}: Mean days late (for submissions that were late).
+  \item \textbf{avg\_score}, \textbf{min\_score}: Mean and minimum score per student.
+  \item \textbf{score\_trend}: Difference between later-half and first-half average scores (negative = declining performance).
+\end{itemize}
+
+\subsection{Temporal / burnout signals}
+From weekly click aggregates:
+\begin{itemize}[noitemsep]
+  \item \textbf{engagement\_decline\_rate}: Ratio of clicks in last 4 weeks to first 4 weeks (clamped); values $<$ 1 indicate declining engagement.
+  \item \textbf{peak\_activity\_week}, \textbf{activity\_std}: Week of maximum activity and standard deviation of weekly clicks.
+  \item \textbf{early\_dropout\_flag}: 1 if student unregistered within 30 days (from \textbf{studentRegistration}).
+\end{itemize}
+
+\subsection{Demographics}
+\textbf{imd\_band\_num} (numeric IMD), \textbf{num\_of\_prev\_attempts}, \textbf{studied\_credits} from \textbf{studentInfo}. Missing numeric features are filled with 0 or neutral defaults (e.g.\ \texttt{engagement\_decline\_rate} = 1.0, \texttt{late\_sub\_rate} = 0).
+
+%==============================================================================
+\section{Model Selection and Reasoning}
+%==============================================================================
+
+\subsection{Early dropout model (4-week)}
+\begin{itemize}[noitemsep]
+  \item \textbf{Input features (7):} \texttt{clicks\_wk1\_4}, \texttt{active\_days\_wk1\_4}, \texttt{submissions\_wk1\_4}, \texttt{early\_scores\_avg}, \texttt{imd\_band\_num}, \texttt{num\_of\_prev\_attempts}, \texttt{studied\_credits}.
+  \item \textbf{Target:} Binary dropout (Withdrawn = 1).
+  \item \textbf{Model:} Random Forest (100 trees, max\_depth=10). Alternatives evaluated: class\_weight=`balanced', bootstrap oversampling of minority class, XGBoost with \texttt{scale\_pos\_weight}, and MLP; the best F1 was achieved with resampled Random Forest.
+  \item \textbf{Rationale:} Random Forest handles mixed scales and missingness well, provides feature importance for interpretability, and with resampling improves recall on the minority (dropout) class while keeping a single model for deployment.
+\end{itemize}
+
+\subsection{Full-course at-risk model}
+\begin{itemize}[noitemsep]
+  \item \textbf{Input features (17):} All footprint, assessment, temporal, and demographic features listed in Section 3 and \texttt{early\_dropout\_flag}.
+  \item \textbf{Target:} Binary at-risk (Withdrawn or Fail = 1).
+  \item \textbf{Model:} Random Forest (100 trees, max\_depth=10, \texttt{class\_weight=`balanced'}).
+  \item \textbf{Rationale:} Same benefits as above; balanced weights mitigate at-risk class imbalance. A single RF is used for both probability output and consistency with the risk-scoring logic.
+\end{itemize}
+
+\subsection{Risk score and interventions}
+A weighted composite risk score (0--100) is computed from the same feature set:
+\begin{itemize}[noitemsep]
+  \item Engagement decline (low \texttt{engagement\_decline\_rate} $\Rightarrow$ high risk), weight 0.30.
+  \item Late submission (\texttt{late\_sub\_rate}), weight 0.25.
+  \item Low scores (100 $-$ \texttt{avg\_score}), weight 0.25.
+  \item Forum absence (\texttt{forum\_clicks} = 0), weight 0.10.
+  \item Socioeconomic (IMD-based), weight 0.10.
+\end{itemize}
+Burnout level: Low (score $\leq$ 33), Medium (33--66), High ($>$ 66). Trigger thresholds (e.g.\ \texttt{late\_sub\_rate} $>$ 0.4, \texttt{score\_trend} $<$ $-10$, \texttt{forum\_clicks} = 0, \texttt{early\_dropout\_flag} = 1) map to recommended interventions (e.g.\ time management workshop, tutoring referral, immediate advisor contact).
+
+%==============================================================================
+\section{Evaluation Metrics}
+%==============================================================================
+
+\subsection{Early dropout model}
+\begin{itemize}[noitemsep]
+  \item Train/test split (e.g.\ 70/30) with stratification on dropout; 10-fold cross-validation for accuracy.
+  \item Reported: \textbf{Accuracy}, \textbf{Precision}, \textbf{Recall}, \textbf{F1}, \textbf{ROC-AUC}. Example baseline: F1 $\approx$ 0.60, ROC-AUC $\approx$ 0.81; with resampling, F1 improves (e.g.\ best F1 $\approx$ 0.64).
+  \item Feature importance (Gini) is computed to rank early signals (e.g.\ clicks\_wk1\_4, early\_scores\_avg).
+\end{itemize}
+
+\subsection{Full at-risk model}
+\begin{itemize}[noitemsep]
+  \item Same metrics on held-out test set; comparison across Random Forest, Decision Tree, and optionally XGBoost in a metrics table (Accuracy, Precision, Recall, F1).
+  \item Target: high precision and F1 so that interventions are focused; ROC curves used to visualise discrimination.
+\end{itemize}
+
+\subsection{Risk score}
+The composite score is validated by examining its distribution by \texttt{final\_result} and by trigger counts; k-Means (e.g.\ k=3) on engagement, late rate, and score risk is used to label clusters and compare with at-risk prevalence.
+
+%==============================================================================
+\section{Behavioural Insights Derived}
+%==============================================================================
+
+\begin{enumerate}[noitemsep]
+  \item \textbf{Engagement decline} is a strong predictor: students whose click activity drops from first to last 4 weeks (low \texttt{engagement\_decline\_rate}) are more likely Withdrawn or Fail; this aligns with ``silent fade'' before formal withdrawal.
+  \item \textbf{Late submission behaviour} (high \texttt{late\_sub\_rate}, \texttt{avg\_days\_late}) correlates with at-risk outcomes; the threshold \texttt{late\_sub\_rate} $>$ 0.4 is used to trigger deadline-related interventions.
+  \item \textbf{Forum absence} (zero \texttt{forum\_clicks}) is associated with higher risk; the model flags these students for peer or tutor engagement.
+  \item \textbf{Score trend} (negative \texttt{score\_trend}) captures deteriorating performance and triggers academic support recommendations.
+  \item \textbf{Early dropout flag} (unregistration within 30 days) is both a powerful feature and a direct trigger for immediate advisor contact.
+  \item \textbf{Socioeconomic (IMD)} and \textbf{num\_of\_prev\_attempts} add predictive signal and help target support for disadvantaged or repeat-attempt students.
+\end{enumerate}
+
+These insights are operationalised in the web application: the same features and thresholds drive the risk score, burnout level, and intervention list returned by the API, so that advisors see a single, consistent behavioural story for each student profile.
+
+\end{document}
